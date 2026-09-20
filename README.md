@@ -30,11 +30,8 @@ The main objective is to understand the relationship between:
 ##2. Design Flow
 
                     RTL
-                    
                      │
-                     
-                     ▼
-                     
+                     ▼  
               RTL Simulation
                      │
                      ▼
@@ -63,6 +60,7 @@ The main objective is to understand the relationship between:
              Timing Analysis
 
 ##3. Tools and Technology
+
 Technology:	            SAED 90nm
 Logic Synthesis:        Synopsys Design Compiler
 Physical Design:	      Synopsys IC Compiler
@@ -73,7 +71,9 @@ Clock Period:          	20 ns
 Target Frequency:      	50 MHz
 Metal Layers:          	9 routable metal layers
 
+
 ##4. Repository Structure
+
 .
 ├── src/
 │   └── counter.v
