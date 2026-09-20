@@ -28,9 +28,13 @@ The main objective is to understand the relationship between:
 - Static Timing Analysis (STA)
 
 ##2. Design Flow
+
                     RTL
+                    
                      │
+                     
                      ▼
+                     
               RTL Simulation
                      │
                      ▼
