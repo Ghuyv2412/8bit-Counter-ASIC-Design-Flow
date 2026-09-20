@@ -1,0 +1,46 @@
+set LinkProject "/home/ltk/ASIC_TRAINING/LAB2_DC/TH3"
+set LinkLibrary_db "/home/ltk/ASIC_LIB/Lib/syn_lib/syn_lib/"
+set LinkSource "${LinkProject}/src"
+set LinkReport "${LinkProject}/dc/dc_report"
+set LinkNetlist "${LinkProject}/netlist"
+#Thiet lap thu vien cong nghe
+define_design_lib WORK -path "work"
+set target_library [list ${LinkLibrary_db}/saed90nm_min.db \
+${LinkLibrary_db}/saed90nm_typ.db \
+${LinkLibrary_db}/saed90nm_max.db]
+set link_library [list * ${LinkLibrary_db}/saed90nm_min.db \
+${LinkLibrary_db}/saed90nm_typ.db \
+${LinkLibrary_db}/saed90nm_max.db]
+# Doc cac file verilog
+read_verilog -rtl ${LinkSource}/counter.v
+# kiem tra neu thiet ke phu hop
+uniquify
+check_design > ${LinkReport}/synth_check_design.rpt
+# set environment
+set_min_library "${LinkLibrary_db}/saed90nm_max.db" -min_version "${LinkLibrary_db}/saed90nm_min.db"
+set_operating_conditions -min BEST -max WORST
+# Constranint cua Counter
+current_design counter
+set design "counter"
+set time_scale 0.1
+set tran [expr (0.05*$time_scale)]
+set delay_in [expr (0.7*$time_scale)]
+set delay_out [expr (0.7*$time_scale)]
+create_clock -period $time_scale -waveform {0 0.05} {iClk}
+#Define design constranints
+set_clock_uncertainty $tran iClk
+set_clock_latency $tran iClk
+set_clock_transition $tran iClk
+set_input_delay $delay_in [all_inputs] -clock iClk
+set_output_delay $delay_out [all_outputs] -clock iClk
+# Compilation
+compile -area_effort medium -map_effort medium
+# Report
+report_area > ${LinkReport}/${design}_synth_area.rpt
+report_cell > ${LinkReport}/${design}_synth_cells.rpt
+report_qor  > ${LinkReport}/${design}_synth_qor.rpt
+report_resources > ${LinkReport}/${design}_synth_resources.rpt
+write_sdc ${LinkNetlist}/${design}_SDC.sdc
+## dump out the synthesis
+#write -f ddc -hierarchy -output ${LinkNetlist}/${design} NL.ddc
+write -hierarchy -format verilog -output ${LinkNetlist}/${design}_NL.v

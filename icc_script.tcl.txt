@@ -1,0 +1,85 @@
+#Thiet lap ten thiet ke
+set cell_name "counter"
+set my_mw_lib "counter_Lib"
+#thiet lap cac duong dan
+set LinkProject "/home/ltk/ASIC_TRAINING/LAB5_ICC"
+set mw_path "${LinkProject}/icc"
+set LinkLibrary_mk "/home/ltk/ASIC_LIB/Lib/process"
+set LinkLibrary_db "/home/ltk/ASIC_LIB/Lib/syn_lib/syn_lib"
+set LinkReport "${LinkProject}/icc/icc_report"
+set LinkNetlist "${LinkProject}/netlist"
+#thiet lap mot so bien trong thiet ke
+set Core_util "0.1"
+set Core_space "5" 
+set mw_logic0_net VSS
+set mw_logic1_net VDD
+set power "VDD"
+set ground "VSS"
+set powerPort "VDD"
+set groundPort "VSS"
+#thiet lap cac duong dan den cac thu vien cong nghe
+set Techfile "${LinkLibrary_mk}/astro/tech/astroTechFile.tf"
+set Ref_lib "${LinkLibrary_mk}/astro/fram/saed90nm_fr"
+set Tlupmax "${LinkLibrary_mk}/star_rcxt/tluplus/saed90nm_1p9m_1t_Cmax.tluplus"
+set Tlupmin "${LinkLibrary_mk}/star_rcxt/tluplus/saed90nm_1p9m_1t_Cmin.tluplus"
+set Tech2itf "${LinkLibrary_mk}/astro/tech/tech2itf.map"
+set target_library [list ${LinkLibrary_db}/saed90nm_min.db ${LinkLibrary_db}/saed90nm_typ.db ${LinkLibrary_db}/saed90nm_max.db]
+set link_library [list * ${LinkLibrary_db}/saed90nm_min.db ${LinkLibrary_db}/saed90nm_typ.db ${LinkLibrary_db}/saed90nm_max.db]
+#tao thu vien mw cua thiet ke
+create_mw_lib -technology $Techfile -mw_reference_library $Ref_lib $my_mw_lib
+
+#import cac tap tin thu vien TLUPplus trong layout
+set_tlu_plus_files -max_tluplus $Tlupmax -min_tluplus $Tlupmin -tech2itf_map $Tech2itf
+open_mw_lib "$my_mw_lib"
+#Import tap tin netlist
+import_designs -format verilog -top $cell_name -cel $cell_name ${LinkNetlist}/${cell_name}_NL.v
+#Uniquyfy va link thiet ke
+uniquify
+link
+uniquify_fp_mw_cel
+#Import tap tin rang buoc cua thiet ke
+read_sdc "${LinkProject}/sdc/${cell_name}_SDC.sdc"
+#luu thiet ke
+save_mw_cel -as "mw_Counter"
+#khoi tao floorplaning
+initialize_floorplan -core_utilization $Core_util -left_io2core $Core_space -bottom_io2core $Core_space -right_io2core $Core_space -top_io2core $Core_space
+#ket noi power va ground
+derive_pg_connection -create_ports all -power_net VDD -power_pin VDD -ground_net VSS -ground_pin VSS -tie
+#tao vong power va ground
+#tao vong VDD
+create_rectangular_rings -nets {VDD} -right_offset 2.0 -right_segment_layer M4 -right_segment_width 0.5 -left_offset 2.0 -left_segment_layer M4 -left_segment_width 0.5 \
+-bottom_offset 2.0 -bottom_segment_layer M5 -bottom_segment_width 0.5 -top_offset 2.0 -top_segment_layer M5  -top_segment_width 0.5 -extend_tl -extend_th
+#tao vong VSS
+create_rectangular_rings -net {VSS} -left_offset 0.5 -left_segment_layer M5 -left_segment_width 0.5 -right_offset 0.5 -right_segment_layer M5 -right_segment_width 0.5 \
+-bottom_offset 0.5 -bottom_segment_layer M5 -bottom_segment_width 0.5 -top_offset 0.5 -top_segment_layer M5 -top_segment_width 0.5 -extend_tl -extend_th
+preroute_standard_cells -mode rail -nets "VSS VDD"
+#tao cac strap VDD VSS
+create_power_straps -direction vertical -start_at 7 -num_placement_strap 10 -increment_x_or_y 6 -nets {VDD} -layer M6 -width 0.5 -do_not_route_over_macros
+create_power_straps -direction horizontal -start_at 7 -num_placement_strap 10 -increment_x_or_y 6 -nets {VSS} -layer M7 -width 0.5 -do_not_route_over_macros
+preroute_standard_cells -mode rail -nets "VSS VDD"
+#luu thiet ke
+save_mw_cel -as "mw_Counter_floorplan"
+#tien hanh placement
+place_opt -effort high
+place_opt -congestion
+#tien hanh CTS
+clock_opt -effort high
+clock_opt -no_clock_route -only_psyn -fix_hold_all_clocks -only_hold_time
+#report timing
+report_placement_utilization > ${LinkReport}/cts_${cell_name}_util.rpt
+report_qor_snapshot > ${LinkReport}/cts_{cell_name}_qor_snapshot.rpt
+report_qor > ${LinkReport}/cts_{cell_name}_qor.rpt
+report_timing -max_paths 20 -delay max > ${LinkReport}/cts_${cell_name}_setup.rpt
+report_timing -max_paths 20 -delay min > ${LinkReport}/cts_${cell_name}_hold.rpt
+#Luu thiet ke
+save_mw_cel -as "mw_Counter_cts"
+#tien hanh routing
+route_opt
+#report timing
+report_placement_utilization > ${LinkReport}/route_${cell_name}_util.rpt
+report_qor_snapshot > ${LinkReport}/route_${cell_name}_qor_snapshot.rpt
+report_qor > ${LinkReport}/route_${cell_name}_qor.rpt
+report_timing -max_paths 20 -delay max > ${LinkReport}/route_${cell_name}_setup.rpt
+report_timing -max_paths 20 -delay min > ${LinkReport}/route_${cell_name}_hold.rpt
+#Luu thiet ke
+save_mw_cel -as "mw_Counter_route"
